@@ -6,8 +6,8 @@
 //  Copyright (c) 2015年 晟昱 陈. All rights reserved.
 //
 
-#ifndef test_opencv_Header_h
-#define test_opencv_Header_h
+#ifndef test_opencv_denoise_h
+#define test_opencv_denoise_h
 
 /*
 IplImage* denoise(IplImage* img,double areaThre)
@@ -69,7 +69,7 @@ IplImage* denoise2(IplImage* img_src,double minarea)
         scanner = cvStartFindContours(img_src,storage,sizeof(CvContour),CV_RETR_CCOMP,CV_CHAIN_APPROX_NONE,cvPoint(0,0));
         //开始遍历轮廓树
         CvRect rect;
-        while (contour=cvFindNextContour(scanner))
+        while ((contour=cvFindNextContour(scanner)))
         {
             //tmparea = fabs(cvContourArea(contour));
             rect = cvBoundingRect(contour,0);
@@ -129,7 +129,6 @@ IplImage* denoise2(IplImage* img_src,double minarea)
         }
     cvReleaseMemStorage(&storage);
     return img_Clone;
-
 }
 #endif
 

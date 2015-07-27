@@ -85,9 +85,9 @@ IplImage* func(IplImage* img, double maxarea = 3000,int low=100,int high=200)
     CvRect rect;
     CvSeq* contour = NULL;
 
-    while (contour=cvFindNextContour(scanner))
+    while ((contour=cvFindNextContour(scanner)))
     {
-        CvRect rect = cvBoundingRect(contour,0);
+        rect = cvBoundingRect(contour,0);
         double tmparea = rect.height*rect.width;
         rect = cvBoundingRect(contour,0);
         bool f = 1;
@@ -95,7 +95,9 @@ IplImage* func(IplImage* img, double maxarea = 3000,int low=100,int high=200)
         ry = rect.y+rect.height/2;
         if(ry<img->height/3)
             f=0;
-        if (tmparea < maxarea && tmparea > 40 && rect.width>5 && rect.height >5 && f)
+        if (tmparea < maxarea
+            && tmparea > 40 && rect.width>5
+            && rect.height >5 && f)
         {
             
             cvDrawContours(co1, contour,CV_RGB(255,100,0),CV_RGB(255,100,0),0,2);
@@ -114,12 +116,14 @@ IplImage* func(IplImage* img, double maxarea = 3000,int low=100,int high=200)
 
 }
 
-/*****主函数
+/*****主函数（返回IplImage结构指针）
 参数:
     imgpath:图像路径
     thre:阈值化阈值
     denoise_area:噪点外接矩形面积最大值
     body_maxarea:人形外接矩形面积最小值
+ 
+    return:结果图像
  */
 IplImage* scanImage(char* imgpath, int thre=125,int denoise_area = 400 ,int body_maxarea =3000)
 {
@@ -161,8 +165,68 @@ IplImage* scanImage(char* imgpath, int thre=125,int denoise_area = 400 ,int body
     cvReleaseImage(&img);
     cvReleaseImage(&b);
     cvReleaseImage(&bto);
-    //cvReleaseImage(&btoc);
     return btoc;
+}
+
+
+/*****主函数（保存图像）
+ 参数:
+ imgpath:图像路径
+ svpath:结果保存路径（含有图像后缀名）
+ thre:阈值化阈值
+ denoise_area:噪点外接矩形面积最大值
+ body_maxarea:人形外接矩形面积最小值
+ 
+ return:cvSaveImage的返回值，根据文件格式的不同返回非负数。如果运行失败返回负数
+ */
+int scanImageSv(char* imgpath,char* svpath, int thre=125,int denoise_area = 400 ,int body_maxarea =3000)
+{
+    if(imgpath == NULL || svpath == NULL)
+    {
+        printf("imgpath = NULL!\n");
+        return -1;
+    }
+    if(thre <0 || thre >255)
+    {
+        printf("thre invalid!\n");
+        return -2;
+    }
+    IplImage * img = cvLoadImage(imgpath); //打开
+    
+    IplImage * grey = cvCreateImage(cvGetSize(img),IPL_DEPTH_8U,1);//转灰度
+    
+    cvCvtColor(img,grey,CV_RGB2GRAY);//转灰度
+    
+    IplImage* gt =cvCreateImage(cvGetSize(img),IPL_DEPTH_8U,1);//储存阈值化图像
+    
+    cvThreshold(grey, gt, thre, 255, CV_THRESH_BINARY); //阈值化
+    
+    IplImage* dimg2 = denoise2(gt,denoise_area); //降噪
+    
+    IplImage* b=cvCreateImage(cvSize(dimg2->width+10,dimg2->height+10), IPL_DEPTH_8U, 1);//储存加边
+    
+    cvCopyMakeBorder(dimg2, b, cvPoint(5, 5), IPL_BORDER_CONSTANT,CV_RGB(255, 255, 255));//加边
+    
+    IplImage* bto = cvCreateImage(cvGetSize(b), IPL_DEPTH_8U, 1);//储存开运算
+    
+    cvMorphologyEx(b, bto, NULL,NULL ,CV_MOP_OPEN,1);//开运算
+    
+    IplImage * btoc = func(bto,body_maxarea); //轮廓处理
+    
+    int res = cvSaveImage(svpath, btoc);//保存图像
+    
+    cvReleaseImage(&grey);
+    cvReleaseImage(&gt);
+    cvReleaseImage(&dimg2);
+    cvReleaseImage(&img);
+    cvReleaseImage(&b);
+    cvReleaseImage(&bto);
+    
+    cvReleaseImage(&btoc);
+    
+    
+    return res;
+
 }
 
 int main()
@@ -178,12 +242,13 @@ int main()
         cvNamedWindow("src");
         cvShowImage("res", res);
         cvShowImage("src", src);
+        //cvSaveImage("/Users/Clover/Desktop/1/%d_res.bmp", res);
         cvWaitKey(0);
         cvReleaseImage(&res);
         cvReleaseImage(&src);
         
-        
     }
+    return 0;
 }
 
 
